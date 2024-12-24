@@ -10,7 +10,6 @@ WIDTH = 1100  # ゲームウィンドウの幅
 HEIGHT = 650  # ゲームウィンドウの高さ
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-
 def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
     """
     オブジェクトが画面内or画面外を判定し，真理値タプルを返す関数
@@ -205,9 +204,13 @@ class Enemy(pg.sprite.Sprite):
         super().__init__()
         self.image = pg.transform.rotozoom(random.choice(__class__.imgs), 0, 0.8)
         self.rect = self.image.get_rect()
-        self.rect.center = random.randint(0, WIDTH), 0
-        self.vx, self.vy = 0, +6
-        self.bound = random.randint(50, HEIGHT//2)  # 停止位置
+        # 出現位置を画面内に限定
+        self.rect.center = (
+            random.randint(self.rect.width // 2, WIDTH - self.rect.width // 2),
+            random.randint(self.rect.height // 2, HEIGHT // 4),
+        )
+        self.vx, self.vy = random.choice([-3, -2, -1, 1, 2, 3]), +6
+        self.bound = random.randint(50, HEIGHT - 50)  # 停止位置
         self.state = "down"  # 降下状態or停止状態
         self.interval = random.randint(50, 300)  # 爆弾投下インターバル
 
@@ -215,13 +218,16 @@ class Enemy(pg.sprite.Sprite):
         """
         敵機を速度ベクトルself.vyに基づき移動（降下）させる
         ランダムに決めた停止位置_boundまで降下したら，_stateを停止状態に変更する
-        引数 screen：画面Surface
         """
-        if self.rect.centery > self.bound:
-            self.vy = 0
-            self.state = "stop"
-        self.rect.move_ip(self.vx, self.vy)
-
+        if self.state == "down":
+            self.rect.move_ip(self.vx, self.vy)
+            # 画面外にはみ出さないように制御
+            yoko, tate = check_bound(self.rect)
+            if not yoko:
+                self.vx *= -1  # 横方向の移動を反転
+            if self.rect.centery > self.bound:
+                self.vy = 0
+                self.state = "stop"
 
 class Score:
     """
@@ -231,15 +237,38 @@ class Score:
     """
     def __init__(self):
         self.font = pg.font.Font(None, 50)
-        self.color = (0, 0, 255)
+        self.text_color = (125, 125, 125)  # 文字の色
+        self.bg_color = (255, 255, 255)  # 四角形の背景色（白）
         self.value = 0
-        self.image = self.font.render(f"Score: {self.value}", 0, self.color)
+        self.image = self.font.render(f"Score: {self.value}", 0, self.text_color)
         self.rect = self.image.get_rect()
-        self.rect.center = 100, HEIGHT-50
+        self.rect.center = WIDTH // 2, 30  # 表示位置を画面中央（幅）に調整
 
-    def update(self, screen: pg.Surface):
-        self.image = self.font.render(f"Score: {self.value}", 0, self.color)
-        screen.blit(self.image, self.rect)
+    def update(self, screen: pg.Surface, Enemy_num, count_ProSpirit, tmr):
+        """
+        スコアの更新と描画を行うメソッド
+        引数：
+          - screen: 描画対象のSurface
+          - Enemy_num: 敵機の数
+          - count_ProSpirit: 実行までのカウント
+        """
+        # 更新されたスコア文字列を生成
+        text = f"Time:{tmr//60:03} : {self.value:05} pt"#, {Enemy_num}, {count_ProSpirit}"
+        self.image = self.font.render(text, True, self.text_color)
+        self.rect = self.image.get_rect()  # 新しいサイズに合わせてRectを更新
+        self.rect.center = WIDTH // 2, 30  # 表示位置を再設定
+
+        # 四角形の大きさを文字サイズに基づいて設定
+        padding_x = 20  # テキストの周囲の余白
+        padding_y = 10
+        bg_rect = pg.Rect(
+            self.rect.x - padding_x,
+            self.rect.y - padding_y,
+            self.image.get_width() + 2 * padding_x,
+            self.image.get_height() + 2 * padding_y,
+        )
+        pg.draw.rect(screen, self.bg_color, bg_rect, border_radius=15)  # 丸角の四角形を描画 # border_radiusで角を丸くする
+        screen.blit(self.image, self.rect) # 文字を描画
 
 def stars(screen: pg.Surface, star_count: int = 100):
     """
@@ -253,8 +282,41 @@ def stars(screen: pg.Surface, star_count: int = 100):
         size = random.randint(1, 3)  # 星のサイズ（1〜3ピクセル）
         pg.draw.circle(screen, (255, 255, 255), (x, y), size)
 
+class ProSpirit:
+    """
+
+    """
+    def __init__(self):
+        self.font = pg.font.Font(None, 50)
+        self.color = (0, 0, 255, 120)           # 青色（透過）
+        self.NiceZone = (128, 128, 128, 100)    # 灰色（透過）
+        self.GreatCircle = (255, 255, 0)        # 黄色（枠）
+        self.x = WIDTH//2                       # 位置を真ん中に設定
+        self.y = HEIGHT//2                      # 位置を真ん中に設定
+        self.outRADIUS = 50                     # ドーナツ型の外側の半径
+        self.inRADIUS = 20                      # ドーナツ側の内側の半径
+        self.RADIUS = self.outRADIUS * 2        # 青い円の初期半径を灰色の2倍に設定
+        self.GreatJudge = (self.outRADIUS + self.inRADIUS)//2
+        self.SPEED = 4                          # 小さくなる速さを設定
+        self.decide = None
+
+    def start(self):
+        self.x = random.randint(self.outRADIUS//2 + 10, WIDTH - self.outRADIUS//2 - 10)   # 
+        self.y = random.randint(self.outRADIUS//2 + 10, HEIGHT - self.outRADIUS//2 - 10)  # 
+        self.GreatJudge = random.randint(self.outRADIUS + 5, self.inRADIUS - 5)           # 黄色い円のGreatの基準
+
+    def update(self):
+        pass
+    def judge(self):
+        if abs(self.RADIUS - self.GreatJudge) <= 2.5:
+            self.decide = "Great"
+        elif self.inRADIUS <= self.RADIUS <= self.outRADIUS:
+            self.decide = "Nice"
+        else:
+            self.decide = "Miss"
+
 def main():
-    pg.display.set_caption("真！こうかとん無双")
+    pg.display.set_caption("スカイバトル")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.Surface((WIDTH, HEIGHT))
     bg_img.fill((0, 0, 0))  # 背景を黒く塗る
@@ -266,7 +328,8 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
-
+    Enemy_num = 0 #　敵機の数
+    count_ProSpirit = None # 実行までのカウント
     tmr = 0
     clock = pg.time.Clock()
     while True:
@@ -278,8 +341,16 @@ def main():
                 beams.add(Beam(bird))
         screen.blit(bg_img, [0, 0])
 
-        if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
+        if Enemy_num > 6 and count_ProSpirit and tmr%60 == 0:
+            count_ProSpirit -= 1
+        elif Enemy_num > 6 and not count_ProSpirit:
+            count_ProSpirit = random.randint(1, 30)
+        elif Enemy_num <= 6:
+            count_ProSpirit = None
+
+        if tmr%60 == 0:  # 200フレームに1回，敵機を出現させる
             emys.add(Enemy())
+            Enemy_num += 1 # 敵機数を増やす
 
         for emy in emys:
             if emy.state == "stop" and tmr%emy.interval == 0:
@@ -290,6 +361,7 @@ def main():
             exps.add(Explosion(emy, 100))  # 爆発エフェクト
             score.value += 10  # 10点アップ
             bird.change_img(6, screen)  # こうかとん喜びエフェクト
+            Enemy_num -= 1 # 敵機数を減らす
 
         for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
             exps.add(Explosion(bomb, 50))  # 爆発エフェクト
@@ -311,7 +383,7 @@ def main():
         bombs.draw(screen)
         exps.update()
         exps.draw(screen)
-        score.update(screen)
+        score.update(screen, Enemy_num, count_ProSpirit, tmr)
         pg.display.update()
         tmr += 1
         clock.tick(50)
