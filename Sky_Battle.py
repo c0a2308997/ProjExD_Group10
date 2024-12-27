@@ -439,8 +439,17 @@ def main():
         # ボタン表示
         pg.draw.rect(screen, color, button_rect)
         button_text = pg.font.Font(None, 50).render("Start Game", True, (0, 0, 0))
-        button_text_rect = button_text.get_rect(center=button_rect.center)
-        screen.blit(button_text, button_text_rect)
+        text_rect = button_text.get_rect(center=button_rect.center)
+        screen.blit(button_text, text_rect)
+
+        # キャラ表示
+        start_img = pg.image.load("fig/alien1.png")
+        start_rct = start_img.get_rect()
+        start_rct.center = WIDTH/2, HEIGHT/2
+        start_rct.centerx += 300
+        screen.blit(start_img, start_rct)
+        start_rct.centerx -= 600
+        screen.blit(start_img, start_rct)
 
         # マウスカーソル位置に〇を描画
         pg.draw.circle(screen, (255, 255, 255), pg.mouse.get_pos(), 14)  # 赤い円を表示
