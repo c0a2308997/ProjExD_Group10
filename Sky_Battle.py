@@ -270,7 +270,7 @@ class Enemy(pg.sprite.Sprite):
         self.now_color = (0, 255, 0)   # 現在のゲージを緑色に設定
 
     def decrease(self, damage):   # 敵のゲージを減らす関数
-        self.now_hp = max(0, self.now_hp - damage)   # 受けたダメージ分、現在のHPを減らす。ただし、0未満にはならない。
+        self.now_hp = max(0, self.now_hp - damage)  # 受けたダメージ分、現在のHPを減らす。ただし、0未満にはならない。
         if self.now_hp <= self.max_hp * 0.2:  # もし現在のHPが最大のHPの20%以下になったら
             self.now_color = (255, 0, 0)  # 現在のゲージの色を赤色に設定
         elif self.now_hp <= self.max_hp * 0.4:  # もし現在のHPが最大のHPの40%以下になったら
@@ -291,7 +291,7 @@ class Enemy(pg.sprite.Sprite):
             if self.rect.centery > self.bound:
                 self.vy = 0
                 self.state = "stop"
-        now_width = (self.now_hp / self.max_hp) * self.rect.width  # # 現在のゲージの幅を、現在のHPに応じて計算
+        now_width = (self.now_hp / self.max_hp) * self.rect.width  # 現在のゲージの幅を、現在のHPに応じて計算
         pg.draw.rect(pg.display.get_surface(), self.empty_color, [self.rect.x, self.rect.y - 10, self.rect.width, 5])  # 空のゲージを描画
         pg.draw.rect(pg.display.get_surface(), self.now_color, [self.rect.x, self.rect.y - 10, now_width, 5])  # 現在のゲージを描画
 
@@ -302,8 +302,8 @@ class Score:
     敵機：10点
     """
     def __init__(self):
-        self.font = pg.font.Font(None, 50)
-        self.text_color = (125, 125, 125)  # 文字の色
+        self.font = pg.font.Font("font/BebasNeue-Regular.ttf", 40)
+        self.text_color = (0, 0, 0)  # 文字の色
         self.bg_color = (255, 255, 255)  # 四角形の背景色（白）
         self.value = 0
         self.image = self.font.render(f"Score: {self.value}", 0, self.text_color)
@@ -319,22 +319,29 @@ class Score:
           - count_ProSpirit: 実行までのカウント
         """
         # 更新されたスコア文字列を生成
-        text = f"Time:{tmr//60:03} : {self.value:05} pt"# {Enemy_num}, {count_ProSpirit}"
+        text = f"{self.value:05} Pt  Time:{tmr//60:03} {Enemy_num:03} {count_ProSpirit}"
         self.image = self.font.render(text, True, self.text_color)
         self.rect = self.image.get_rect()  # 新しいサイズに合わせてRectを更新
         self.rect.center = WIDTH // 2, 30  # 表示位置を再設定
 
         # 四角形の大きさを文字サイズに基づいて設定
         padding_x = 20  # テキストの周囲の余白
-        padding_y = 10
+        padding_y = 5
         bg_rect = pg.Rect(
             self.rect.x - padding_x,
             self.rect.y - padding_y,
             self.image.get_width() + 2 * padding_x,
             self.image.get_height() + 2 * padding_y,
         )
-        pg.draw.rect(screen, self.bg_color, bg_rect, border_radius=15)  # 丸角の四角形を描画 # border_radiusで角を丸くする
-        screen.blit(self.image, self.rect) # 文字を描画
+        # 背景用の透明なSurfaceを作成（アルファチャネル有効）
+        bg_surface = pg.Surface((bg_rect.width, bg_rect.height), pg.SRCALPHA)
+        # 丸角の四角形を背景Surfaceに描画
+        rounded_rect_color = (255, 255, 255, 200)  # RGBA値（透明度10）
+        pg.draw.rect(bg_surface, rounded_rect_color, bg_surface.get_rect(), border_radius=15)
+        # 背景Surfaceをメイン画面に描画
+        screen.blit(bg_surface, (bg_rect.x, bg_rect.y))
+        # 文字を描画
+        screen.blit(self.image, self.rect)
 
 def stars(screen: pg.Surface, star_count: int = 100):
     """
@@ -350,20 +357,20 @@ def stars(screen: pg.Surface, star_count: int = 100):
 
 class ProSpirit:
     """
-
+    
     """
     def __init__(self):
         self.font = pg.font.Font(None, 50)
-        self.color = (0, 0, 255, 120)           # 青色（透過）
-        self.NiceZone = (128, 128, 128, 100)    # 灰色（透過）
-        self.GreatCircle = (255, 255, 0)        # 黄色（枠）
-        self.x = WIDTH//2                       # 位置を真ん中に設定
-        self.y = HEIGHT//2                      # 位置を真ん中に設定
-        self.outRADIUS = 50                     # ドーナツ型の外側の半径
-        self.inRADIUS = 20                      # ドーナツ側の内側の半径
-        self.RADIUS = self.outRADIUS * 2        # 青い円の初期半径を灰色の2倍に設定
+        self.color = (0, 0, 255, 120) # 青色（透過）
+        self.NiceZone = (128, 128, 128, 100) # 灰色（透過）
+        self.GreatCircle = (255, 255, 0) # 黄色（枠）
+        self.x = WIDTH//2 # 位置を真ん中に設定
+        self.y = HEIGHT//2 # 位置を真ん中に設定
+        self.outRADIUS = 50 # ドーナツ型の外側の半径
+        self.inRADIUS = 20 # ドーナツ側の内側の半径
+        self.RADIUS = self.outRADIUS * 2 # 青い円の初期半径を灰色の2倍に設定
         self.GreatJudge = (self.outRADIUS + self.inRADIUS)//2
-        self.SPEED = 4                          # 小さくなる速さを設定
+        self.SPEED = 4 # 小さくなる速さを設定
         self.decide = None
 
     def start(self):
@@ -390,7 +397,7 @@ class ProSpirit:
 
 def main():
     pg.display.set_caption("スカイバトル")
-    screen = pg.display.set_mode((WIDTH, HEIGHT))
+    screen = pg.display.set_mode((WIDTH, HEIGHT), pg.SRCALPHA)
     bg_img = pg.Surface((WIDTH, HEIGHT))
     bg_img.fill((0, 0, 0))  # 背景を黒く塗る
     stars(bg_img, 200)  # 星を200個描画
@@ -407,49 +414,65 @@ def main():
     tmr = 0
     clock = pg.time.Clock()
     start = None
-    
-    # ボタンの位置とサイズ
-    button_rect = pg.Rect(WIDTH // 2 - 100, HEIGHT // 2, 200, 50)
-    color_button = (255, 255, 255)
-    color_cursor = (200, 200, 200)
+
+    # 初期化部分
+    title_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 74)
+    button_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 50)
+    info_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 30)  # 説明文用のフォント
+    start_img = pg.image.load("fig/alien1.png")
+    button_rect = pg.Rect(WIDTH // 2 - 150, HEIGHT // 2, 300, 50)
+
+    # 操作説明テキスト
+    instructions = [
+        "ルール説明",
+        "・WASDで操作し、マウスを合わせてクリックで攻撃しよう。",
+        "・時々現れるタイミングゲームで大打撃を与えよう。",
+        "・HPがなくなるとゲームオーバーになるよ。"
+    ]
 
     while not start:
         for event in pg.event.get():
             if event.type == pg.QUIT or event.type == pg.KEYDOWN and event.key == pg.K_e:
                 return 0
-            elif event.type == pg.MOUSEBUTTONDOWN:
-                if button_rect.collidepoint(event.pos):
-                    start = True
+            elif event.type == pg.MOUSEBUTTONDOWN and button_rect.collidepoint(event.pos):
+                start = True
+            elif event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                start = True
             elif event.type == pg.KEYDOWN and event.key == pg.K_r:
                 bg_img.fill((0, 0, 0))  # 背景を黒く塗る
-                stars(bg_img, 200)  # 星を200個描画
+                stars(bg_img, random.randint(10, 300))  # 星をランダムの量で描画
+
         screen.blit(bg_img, [0, 0])
 
         # タイトル表示
-        title = pg.font.Font(None, 74).render(r"Sky Battle", True, (255, 255, 255))
+        title = title_font.render("スカイバトル.", True, (255, 255, 255))
         title_rect = title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 100))
         screen.blit(title, title_rect)
 
         # ボタンの色変更
         if button_rect.collidepoint(pg.mouse.get_pos()):
-            color = color_cursor
+            color = (200, 200, 200)
         else:
-            color = color_button
+            color = (255, 255, 255)
 
         # ボタン表示
         pg.draw.rect(screen, color, button_rect)
-        button_text = pg.font.Font(None, 50).render("Start Game", True, (0, 0, 0))
+        button_text = button_font.render("Start Game", True, (0, 0, 255))
         text_rect = button_text.get_rect(center=button_rect.center)
         screen.blit(button_text, text_rect)
 
         # キャラ表示
-        start_img = pg.image.load("fig/alien1.png")
         start_rct = start_img.get_rect()
         start_rct.center = WIDTH/2, HEIGHT/2
         start_rct.centerx += 300
         screen.blit(start_img, start_rct)
         start_rct.centerx -= 600
         screen.blit(start_img, start_rct)
+
+        # ルール説明表示
+        for i in range(len(instructions)):
+            info_text = info_font.render(instructions[i], True, (255, 255, 255))
+            screen.blit(info_text, (150, HEIGHT//3*2 + i * 40))  # 位置を調整
 
         # マウスカーソル位置に〇を描画
         pg.draw.circle(screen, (255, 255, 255), pg.mouse.get_pos(), 14)  # 赤い円を表示
@@ -487,7 +510,7 @@ def main():
         elif Enemy_num <= 6:
             count_ProSpirit = None
 
-        if tmr%60 == 0:  # 200フレームに1回，敵機を出現させる
+        if tmr%60 == 0 or Enemy_num <= 6:  # 200フレームに1回，敵機を出現させる
             emys.add(Enemy())
             Enemy_num += 1 # 敵機数を増やす
 
@@ -511,16 +534,16 @@ def main():
                 score.value += 1
 
 
-        for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
-            if bird.state == "normal":
-                if hp_gauge.decrease(2):  # ダメージを受け、HPが0の場合
-                    hp_gauge.update(screen)  # 負け判定後もゲージを表示
-                    score.update(screen, Enemy_num, count_ProSpirit, tmr)
-                    pg.display.update()
-                    time.sleep(2)
-                    return
-            elif bird.state == "hyper":
-                continue
+        # for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
+        #     if bird.state == "normal":
+        #         if hp_gauge.decrease(2):  # ダメージを受け、HPが0の場合
+        #             hp_gauge.update(screen)  # 負け判定後もゲージを表示
+        #             score.update(screen, Enemy_num, count_ProSpirit, tmr)
+        #             pg.display.update()
+        #             time.sleep(2)
+        #             return
+        #     elif bird.state == "hyper":
+        #         continue
 
         bird.update(key_lst, screen)
         beams.update()
