@@ -419,16 +419,18 @@ def main():
     title_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 74)
     button_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 50)
     info_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 30)  # 説明文用のフォント
+    start_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 27) # スタート方法文用のフォント
     start_img = pg.image.load("fig/alien1.png")
     button_rect = pg.Rect(WIDTH // 2 - 150, HEIGHT // 2, 300, 50)
 
     # 操作説明テキスト
     instructions = [
         "ルール説明",
-        "・WASDで操作し、マウスを合わせてクリックで攻撃しよう。",
+        "・WASDで操作し，マウスを合わせてクリックで攻撃しよう。",
         "・時々現れるタイミングゲームで大打撃を与えよう。",
         "・HPがなくなるとゲームオーバーになるよ。"
     ]
+    start_info = "『Start Game』にカーソルを合わせてクリック，またはスペースキーでゲームを開始しよう。" # スタート方法のテキスト
 
     while not start:
         for event in pg.event.get():
@@ -473,6 +475,11 @@ def main():
         for i in range(len(instructions)):
             info_text = info_font.render(instructions[i], True, (255, 255, 255))
             screen.blit(info_text, (150, HEIGHT//3*2 + i * 40))  # 位置を調整
+
+        # スタート方法の表示
+        start_text = start_font.render(start_info, True, (255, 0, 0))
+        start_rect = start_text.get_rect(center=(WIDTH // 2, HEIGHT - 20))
+        screen.blit(start_text, start_rect)
 
         # マウスカーソル位置に〇を描画
         pg.draw.circle(screen, (255, 255, 255), pg.mouse.get_pos(), 14)  # 赤い円を表示
