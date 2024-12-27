@@ -34,9 +34,6 @@ def calc_orientation(org: pg.Rect, dst: pg.Rect) -> tuple[float, float]:
     norm = math.sqrt(x_diff**2+y_diff**2)
     return x_diff/norm, y_diff/norm
 
-
-
-
 class HpGauge:
     """
     HPゲージに関するクラス
@@ -61,7 +58,6 @@ class HpGauge:
         now_width = (self.now_hp / self.max_hp) * self.max_width  # 現在のゲージの幅を、現在のHPに応じて計算
         pg.draw.rect(screen, self.empty_color, [WIDTH - 220, 20, self.max_width, self.max_hight])  # 空のゲージを描画
         pg.draw.rect(screen, self.now_color, [WIDTH - 220, 20, now_width, self.max_hight])  # 現在のゲージを描画
-
 
 class Bird(pg.sprite.Sprite):
     """
@@ -117,8 +113,6 @@ class Bird(pg.sprite.Sprite):
         引数1 key_lst：押下キーの真理値リスト
         引数2 screen：画面Surface
         """
-
-        
         sum_mv = [0, 0]
         for k, mv in __class__.delta.items():
             if key_lst[k]:
@@ -144,8 +138,6 @@ class Bird(pg.sprite.Sprite):
             self.hyper_life = 10
         
         screen.blit(self.image, self.rect)
-
-        
 
 class Bomb(pg.sprite.Sprite):
     """
@@ -214,9 +206,6 @@ class Beam(pg.sprite.Sprite):
         self.vel_x = math.cos(angle) * self.speed
         self.vel_y = math.sin(angle) * self.speed
 
-
-    
-
     def update(self):
         """
         ビームを速度ベクトルself.vx, self.vyに基づき移動させる
@@ -228,10 +217,6 @@ class Beam(pg.sprite.Sprite):
         if check_bound(self.rect) != (True, True):
             self.kill()
     
-
-
-
-
 class Explosion(pg.sprite.Sprite):
     """
     爆発に関するクラス
@@ -310,7 +295,6 @@ class Enemy(pg.sprite.Sprite):
         pg.draw.rect(pg.display.get_surface(), self.empty_color, [self.rect.x, self.rect.y - 10, self.rect.width, 5])  # 空のゲージを描画
         pg.draw.rect(pg.display.get_surface(), self.now_color, [self.rect.x, self.rect.y - 10, now_width, 5])  # 現在のゲージを描画
 
-
 class Score:
     """
     打ち落とした爆弾，敵機の数をスコアとして表示するクラス
@@ -321,7 +305,7 @@ class Score:
         self.font = pg.font.Font(None, 50)
         self.text_color = (125, 125, 125)  # 文字の色
         self.bg_color = (255, 255, 255)  # 四角形の背景色（白）
-        self.value = 714
+        self.value = 0
         self.image = self.font.render(f"Score: {self.value}", 0, self.text_color)
         self.rect = self.image.get_rect()
         self.rect.center = WIDTH // 2, 30  # 表示位置を画面中央（幅）に調整
@@ -420,10 +404,55 @@ def main():
     emys = pg.sprite.Group()
     Enemy_num = 0 #　敵機の数
     count_ProSpirit = None # 実行までのカウント
-    Enemy_num = 0 #　敵機の数
-    count_ProSpirit = None # 実行までのカウント
     tmr = 0
     clock = pg.time.Clock()
+    start = None
+    
+    # ボタンの位置とサイズ
+    button_rect = pg.Rect(WIDTH // 2 - 100, HEIGHT // 2, 200, 50)
+    color_button = (255, 255, 255)
+    color_cursor = (200, 200, 200)
+
+    while not start:
+        for event in pg.event.get():
+            if event.type == pg.QUIT or event.type == pg.KEYDOWN and event.key == pg.K_e:
+                return 0
+            elif event.type == pg.MOUSEBUTTONDOWN:
+                if button_rect.collidepoint(event.pos):
+                    start = True
+            elif event.type == pg.KEYDOWN and event.key == pg.K_r:
+                bg_img.fill((0, 0, 0))  # 背景を黒く塗る
+                stars(bg_img, 200)  # 星を200個描画
+        screen.blit(bg_img, [0, 0])
+
+        # タイトル表示
+        title = pg.font.Font(None, 74).render(r"Sky Battle", True, (255, 255, 255))
+        title_rect = title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 100))
+        screen.blit(title, title_rect)
+
+        # ボタンの色変更
+        if button_rect.collidepoint(pg.mouse.get_pos()):
+            color = color_cursor
+        else:
+            color = color_button
+
+        # ボタン表示
+        pg.draw.rect(screen, color, button_rect)
+        button_text = pg.font.Font(None, 50).render("Start Game", True, (0, 0, 0))
+        button_text_rect = button_text.get_rect(center=button_rect.center)
+        screen.blit(button_text, button_text_rect)
+
+        # マウスカーソル位置に〇を描画
+        pg.draw.circle(screen, (255, 255, 255), pg.mouse.get_pos(), 14)  # 赤い円を表示
+        pg.draw.circle(screen, (0, 0, 0, 0), pg.mouse.get_pos(), 10)  # 黒い円を表示
+
+        pg.display.update()
+        clock.tick(60)
+
+    screen.blit(bg_img, [0, 0])
+    pg.display.update()
+    time.sleep(1)
+
     while True:
         key_lst = pg.key.get_pressed()
         for event in pg.event.get():
@@ -438,8 +467,6 @@ def main():
             if event.type == pg.KEYDOWN and bird.state != "hyper" and bird.move == "move": 
                 if event.type == pg.KEYDOWN and event.key == pg.K_f :
                     bird.state = "hyper"
-                    
-            
             if event.type == pg.KEYDOWN and event.key == pg.K_INSERT and score.value >= 200:  # スコア条件とキー押下条件
                 score.value -= 200  # スコア消費
         screen.blit(bg_img, [0, 0])
@@ -475,16 +502,16 @@ def main():
                 score.value += 1
 
 
-        # for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
-        #     if bird.state == "normal":
-        #         if hp_gauge.decrease(2):  # ダメージを受け、HPが0の場合
-        #             hp_gauge.update(screen)  # 負け判定後もゲージを表示
-        #             score.update(screen, Enemy_num, count_ProSpirit, tmr)
-        #             pg.display.update()
-        #             time.sleep(2)
-        #             return
-        #     elif bird.state == "hyper":
-        #         continue
+        for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
+            if bird.state == "normal":
+                if hp_gauge.decrease(2):  # ダメージを受け、HPが0の場合
+                    hp_gauge.update(screen)  # 負け判定後もゲージを表示
+                    score.update(screen, Enemy_num, count_ProSpirit, tmr)
+                    pg.display.update()
+                    time.sleep(2)
+                    return
+            elif bird.state == "hyper":
+                continue
 
         bird.update(key_lst, screen)
         beams.update()
