@@ -496,21 +496,11 @@ class ProSpirit:
             self.decide = "Miss"
         return self.decide
     
-# 初期化処理を関数化
-def reset_game():
-    return {
-        "score": Score(),
-        "hp_gauge": HpGauge(),
-        "bird": Bird(3, (900, 400)),
-        "bombs": pg.sprite.Group(),
-        "beams": pg.sprite.Group(),
-        "emys": pg.sprite.Group(),
-        "explosions": pg.sprite.Group(),
-        "Enemy_num": 0,
-        "count_ProSpirit": None,
-        "result_ProSpirit": None,
-        "tmr": 0,
-    }
+def reset_game(score, Enemy_num = 0, tmr = 0):
+    score.value = 0
+    Enemy_num = 0 #　敵機の数
+    tmr = 0
+    return Enemy_num, tmr
 
 def main():
     pg.display.set_caption("スカイバトル")
@@ -526,7 +516,6 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
-    explosions = pygame.sprite.Group()
     Enemy_num = 0 #　敵機の数
     count_ProSpirit = None # 実行までのカウント
     result_ProSpirit = None
@@ -613,8 +602,6 @@ def main():
     time.sleep(1)
     Game = True
     while Game:
-        hp_gauge = HpGauge()
-        score = Score()
         while True:
             key_lst = pg.key.get_pressed()
             result_ProSpirit = None
@@ -705,6 +692,7 @@ def main():
                         print("ゲームオーバー")
                         if not Game:
                             return  # プログラム終了
+                        Enemy_num, tmr = reset_game(score)
                 elif bird.state == "hyper":
                     continue
 
