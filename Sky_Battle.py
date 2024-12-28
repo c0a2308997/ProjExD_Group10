@@ -496,11 +496,15 @@ class ProSpirit:
             self.decide = "Miss"
         return self.decide
     
-def reset_game(score, Enemy_num = 0, tmr = 0):
+def reset_game(score, emys, hp_gauge, Enemy_num=0, tmr=0): 
     score.value = 0
-    Enemy_num = 0 #　敵機の数
-    tmr = 0
+    Enemy_num = 0  # 敵機の数
+    tmr = 0  # タイマー
+    hp_gauge.now_hp = hp_gauge.max_hp  # 自キャラのHPを最大に回復
+    emys.empty()  # 敵を全削除
+    hp_gauge.now_color = (0, 255, 0)  # 現在のゲージを緑色に再設定
     return Enemy_num, tmr
+
 
 def main():
     pg.display.set_caption("スカイバトル")
@@ -632,7 +636,7 @@ def main():
                 ProSpirit_game.start()
                 result_ProSpirit = ProSpirit_game.update(result_ProSpirit, screen, bird, key_lst, bg_img, Enemy_num, count_ProSpirit, tmr, emys, bombs, exps, score, hp_gauge, clock)
 
-            if tmr%60 == 0 or Enemy_num <= 4:  # 200フレームに1回，敵機を出現させる
+            if tmr%60 == 0:  # 200フレームに1回，敵機を出現させる
                 emys.add(Enemy())
                 Enemy_num += 1 # 敵機数を増やす
 
@@ -692,7 +696,7 @@ def main():
                         print("ゲームオーバー")
                         if not Game:
                             return  # プログラム終了
-                        Enemy_num, tmr = reset_game(score)
+                        Enemy_num, tmr = reset_game(score, emys, hp_gauge)
                 elif bird.state == "hyper":
                     continue
 
