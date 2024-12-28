@@ -339,6 +339,54 @@ class Score:
         screen.blit(bg_surface, (bg_rect.x, bg_rect.y))# 背景Surfaceをメイン画面に描画
         screen.blit(self.image, self.rect)# 文字を描画
 
+def gameover(screen: pg.Surface) -> None:
+    clock = pg.time.Clock()
+    alpha = 0  # 背景フェードイン用
+    fade_speed = 5  # フェード速度
+    # 背景色の赤いレイヤー
+    red_img = pg.Surface((WIDTH, HEIGHT))
+    red_img.fill((255, 127, 80))
+    red_img.set_alpha(alpha)
+    # フォント設定
+    font = pg.font.Font(None, 80)
+    small_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 40)
+    # テキストレンダリング
+    txt = font.render("Game Over", True, (255, 255, 255))
+    txt_rct = txt.get_rect(center=(WIDTH / 2, HEIGHT / 3))
+    restart_txt = small_font.render("Enterキーを押して再起動するか、Qキーを押して終了します", True, (255, 255, 255))
+    restart_txt_rct = restart_txt.get_rect(center=(WIDTH / 2, HEIGHT / 1.5))
+    # イラスト画像読み込み
+    cry_img = pg.image.load("fig/8.png")
+    cry_img = pg.transform.scale(cry_img, (150, 150))  # サイズ調整
+    cry_rct = cry_img.get_rect()
+    cry_rct.center = WIDTH / 2, HEIGHT / 2
+    while True:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+            elif event.type == pg.KEYDOWN:
+                if event.key == pg.K_RETURN:
+                    time.sleep(1)
+                    return True
+                elif event.key == pg.K_q:
+                    time.sleep(1)
+                    return None
+        # 背景のフェードイン効果
+        if alpha < 255:
+            alpha += fade_speed
+            red_img.set_alpha(alpha)
+        # 描画
+        screen.blit(red_img, (0, 0))
+        screen.blit(txt, txt_rct)
+        screen.blit(restart_txt, restart_txt_rct)
+        screen.blit(cry_img, cry_rct)
+        # 簡単なアニメーション: 画像を左右に揺らす
+        cry_rct.centerx += 2 * (pg.time.get_ticks() // 100 % 2 * 2 - 1)  # 100msごとに動きの向きを切り替え
+        pg.display.update()
+        clock.tick(60)
+
+
 def stars(screen: pg.Surface, star_count: int = 100):
     """
     ランダムに星を描画する
@@ -395,9 +443,8 @@ class ProSpirit:
                 if event.type == pg.QUIT:
                     pg.quit()
                     sys.exit()
-                if event.type == pg.KEYDOWN:
-                    if event.key == pg.K_SPACE:
-                        result_ProSpirit = self.judge()  # 他の関数を呼び出す
+                if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                    result_ProSpirit = self.judge()  # 他の関数を呼び出す
             if self.RADIUS <= 0:
                 result_ProSpirit = "Miss"
             screen.blit(bg_img, [0, 0])
@@ -448,6 +495,22 @@ class ProSpirit:
         else:
             self.decide = "Miss"
         return self.decide
+    
+# 初期化処理を関数化
+def reset_game():
+    return {
+        "score": Score(),
+        "hp_gauge": HpGauge(),
+        "bird": Bird(3, (900, 400)),
+        "bombs": pg.sprite.Group(),
+        "beams": pg.sprite.Group(),
+        "emys": pg.sprite.Group(),
+        "explosions": pg.sprite.Group(),
+        "Enemy_num": 0,
+        "count_ProSpirit": None,
+        "result_ProSpirit": None,
+        "tmr": 0,
+    }
 
 def main():
     pg.display.set_caption("スカイバトル")
@@ -469,7 +532,7 @@ def main():
     result_ProSpirit = None
     tmr = 0
     clock = pg.time.Clock()
-    start = None # スタート画面の有無
+    start = True # スタート画面の有無
 
     # 初期化部分
     title_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 74)
@@ -488,20 +551,18 @@ def main():
     ]
     start_info = "『Start Game』にカーソルを合わせてクリック，またはスペースキーでゲームを開始しよう。" # スタート方法のテキスト
 
-    while not start:
+    while start:
         for event in pg.event.get():
             if event.type == pg.QUIT or event.type == pg.KEYDOWN and event.key == pg.K_q:
                 return 0
             elif event.type == pg.MOUSEBUTTONDOWN and button_rect.collidepoint(event.pos):
-                start = True
+                start = None
                 screen.blit(bg_img, [0, 0])
                 pg.display.update()
-                time.sleep(1)
             elif event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                start = True
+                start = None
                 screen.blit(bg_img, [0, 0])
                 pg.display.update()
-                time.sleep(1)
             elif event.type == pg.KEYDOWN and event.key == pg.K_r:
                 bg_img.fill((0, 0, 0))  # 背景を黒く塗る
                 stars(bg_img, random.randint(10, 300))  # 星をランダムの量で描画
@@ -549,118 +610,124 @@ def main():
 
         pg.display.update()
         clock.tick(60)
+    time.sleep(1)
+    Game = True
+    while Game:
+        hp_gauge = HpGauge()
+        score = Score()
+        while True:
+            key_lst = pg.key.get_pressed()
+            result_ProSpirit = None
+            for event in pg.event.get():
+                if event.type == pg.QUIT or event.type == pg.KEYDOWN and event.key == pg.K_q:
+                    return 0
+                if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                    beam_m = Beam(bird, bird.rect.center ,pygame.mouse.get_pos())
+                    beams.add(beam_m)
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    beam_m = Beam(bird, bird.rect.center ,pygame.mouse.get_pos())
+                    beams.add(beam_m)
+                if event.type == pg.KEYDOWN and bird.state != "hyper" and bird.move == "move": 
+                    if event.type == pg.KEYDOWN and event.key == pg.K_f :
+                        bird.state = "hyper"
+                if event.type == pg.KEYDOWN and event.key == pg.K_INSERT and score.value >= 200:  # スコア条件とキー押下条件
+                    score.value -= 200  # スコア消費
+            screen.blit(bg_img, [0, 0])
 
-    while True:
-        key_lst = pg.key.get_pressed()
-        result_ProSpirit = None
-        for event in pg.event.get():
-            if event.type == pg.QUIT or event.type == pg.KEYDOWN and event.key == pg.K_q:
-                return 0
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                beam_m = Beam(bird, bird.rect.center ,pygame.mouse.get_pos())
-                beams.add(beam_m)
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                beam_m = Beam(bird, bird.rect.center ,pygame.mouse.get_pos())
-                beams.add(beam_m)
-            if event.type == pg.KEYDOWN and bird.state != "hyper" and bird.move == "move": 
-                if event.type == pg.KEYDOWN and event.key == pg.K_f :
-                    bird.state = "hyper"
-            if event.type == pg.KEYDOWN and event.key == pg.K_INSERT and score.value >= 200:  # スコア条件とキー押下条件
-                score.value -= 200  # スコア消費
-        screen.blit(bg_img, [0, 0])
+            if Enemy_num <= 6:
+                count_ProSpirit = None
+            elif Enemy_num > 6 and count_ProSpirit is None:
+                count_ProSpirit = random.randint(1, 30) 
+            elif count_ProSpirit and tmr%60 == 0:
+                count_ProSpirit -= 1
+            elif count_ProSpirit <= 0:
+                count_ProSpirit = None
+                ProSpirit_game.start()
+                result_ProSpirit = ProSpirit_game.update(result_ProSpirit, screen, bird, key_lst, bg_img, Enemy_num, count_ProSpirit, tmr, emys, bombs, exps, score, hp_gauge, clock)
 
-        if Enemy_num <= 6:
-            count_ProSpirit = None
-        elif Enemy_num > 6 and count_ProSpirit is None:
-            count_ProSpirit = random.randint(1, 30) 
-        elif count_ProSpirit and tmr%60 == 0:
-            count_ProSpirit -= 1
-        elif count_ProSpirit <= 0:
-            count_ProSpirit = None
-            ProSpirit_game.start()
-            result_ProSpirit = ProSpirit_game.update(result_ProSpirit, screen, bird, key_lst, bg_img, Enemy_num, count_ProSpirit, tmr, emys, bombs, exps, score, hp_gauge, clock)
+            if tmr%60 == 0 or Enemy_num <= 4:  # 200フレームに1回，敵機を出現させる
+                emys.add(Enemy())
+                Enemy_num += 1 # 敵機数を増やす
 
-        if tmr%60 == 0 or Enemy_num <= 4:  # 200フレームに1回，敵機を出現させる
-            emys.add(Enemy())
-            Enemy_num += 1 # 敵機数を増やす
-
-        for emy in emys:
-            if emy.state == "stop" and tmr % emy.interval == 0:
-                # 敵機が停止状態に入ったら，intervalに応じて爆弾投下
-                bomb_type = random.choice([0, 1])
-                bombs.add(Bomb(emy, bird, bomb_type))
-        for emy in pg.sprite.groupcollide(emys, beams, False, True).keys():  # ビームと衝突した敵機リスト
-            if emy.decrease(5):  # ダメージを与え、HPが0の場合
-                emys.remove(emy)  # 敵のリストからemyを削除
-                exps.add(Explosion(emy, 100))  # 爆発エフェクト
-                score.value += 10  # 10点アップ
-                bird.change_img(6, screen)  # こうかとん喜びエフェクト
-                Enemy_num -= 1 # 敵機数を減らす
-
-        for i, bomb in enumerate(pg.sprite.groupcollide(bombs, beams, False, True).keys()):  # ビームと衝突した爆弾リスト
-            if bomb.type == 0:
-                bomb.bomb_check()
-                exps.add(Explosion(bomb, 50))  # 爆発エフェクト
-                score.value += 1
-
-        if result_ProSpirit == "Great":
-        # すべての敵を削除
             for emy in emys:
-                emys.remove(emy)  # 敵のリストからemyを削除
-                exps.add(Explosion(emy, 100))  # 爆発エフェクト
-                score.value += 10  # 10点アップ
-                bird.change_img(6, screen)  # こうかとん喜びエフェクト
-                Enemy_num -= 1 # 敵機数を減らす
-            for bomb in bombs:
-                bomb.bomb_check()
-                exps.add(Explosion(bomb, 50))  # 爆発エフェクト
-                score.value += 1
-        elif result_ProSpirit == "Nice":
-        # 半分の敵を削除
-            half_count = len(emys) // 2
-            emys_to_remove = random.sample(emys.sprites(), half_count)  # ランダムに半分の敵を選択
-            for emy in emys_to_remove:
-                emys.remove(emy)  # 敵のリストからemyを削除
-                exps.add(Explosion(emy, 100))  # 爆発エフェクト
-                score.value += 10  # 10点アップ
-                bird.change_img(6, screen)  # こうかとん喜びエフェクト
-                Enemy_num -= 1 # 敵機数を減らす
-            for bomb in bombs:
-                bomb.bomb_check()
-                exps.add(Explosion(bomb, 50))  # 爆発エフェクト
-                score.value += 1
+                if emy.state == "stop" and tmr % emy.interval == 0:
+                    # 敵機が停止状態に入ったら，intervalに応じて爆弾投下
+                    bomb_type = random.choice([0, 1])
+                    bombs.add(Bomb(emy, bird, bomb_type))
+            for emy in pg.sprite.groupcollide(emys, beams, False, True).keys():  # ビームと衝突した敵機リスト
+                if emy.decrease(5):  # ダメージを与え、HPが0の場合
+                    emys.remove(emy)  # 敵のリストからemyを削除
+                    exps.add(Explosion(emy, 100))  # 爆発エフェクト
+                    score.value += 10  # 10点アップ
+                    bird.change_img(6, screen)  # こうかとん喜びエフェクト
+                    Enemy_num -= 1 # 敵機数を減らす
 
-        # for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
-        #     if bird.state == "normal":
-        #         if hp_gauge.decrease(2):  # ダメージを受け、HPが0の場合
-        #             hp_gauge.update(screen)  # 負け判定後もゲージを表示
-        #             score.update(screen, Enemy_num, count_ProSpirit, tmr)
-        #             pg.display.update()
-        #             time.sleep(2)
-        #             return
-        #     elif bird.state == "hyper":
-        #         continue
+            for i, bomb in enumerate(pg.sprite.groupcollide(bombs, beams, False, True).keys()):  # ビームと衝突した爆弾リスト
+                if bomb.type == 0:
+                    bomb.bomb_check()
+                    exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+                    score.value += 1
 
-        bird.update(key_lst, screen)
-        beams.update()
-        beams.draw(screen)
-        emys.update()
-        emys.draw(screen)
-        bombs.update()
-        bombs.draw(screen)
-        exps.update()
-        exps.draw(screen)
-        score.update(screen, Enemy_num, count_ProSpirit, tmr)
-        hp_gauge.update(screen)  # 更新されたHPゲージを表示
-        # マウスカーソル位置にドーナツ型の円を描画
-        pos = pg.mouse.get_pos()
-        circle = pg.Surface((28, 28), pg.SRCALPHA)  # 固定サイズのサーフェスを作成
-        pg.draw.circle(circle, (255, 255, 255), (14, 14), 14)  # 外側の白い円
-        pg.draw.circle(circle, (0, 0, 0, 0), (14, 14), 10)  # 内側の黒い円
-        screen.blit(circle, (pos[0] - 14, pos[1] - 14))  # サークルをマウス位置に描画
-        pg.display.update()
-        tmr += 1
-        clock.tick(50)
+            if result_ProSpirit == "Great":
+            # すべての敵を削除
+                for emy in emys:
+                    emys.remove(emy)  # 敵のリストからemyを削除
+                    exps.add(Explosion(emy, 100))  # 爆発エフェクト
+                    score.value += 10  # 10点アップ
+                    bird.change_img(6, screen)  # こうかとん喜びエフェクト
+                    Enemy_num -= 1 # 敵機数を減らす
+                for bomb in bombs:
+                    bomb.bomb_check()
+                    exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+                    score.value += 1
+            elif result_ProSpirit == "Nice":
+            # 半分の敵を削除
+                half_count = len(emys) // 2
+                emys_to_remove = random.sample(emys.sprites(), half_count)  # ランダムに半分の敵を選択
+                for emy in emys_to_remove:
+                    emys.remove(emy)  # 敵のリストからemyを削除
+                    exps.add(Explosion(emy, 100))  # 爆発エフェクト
+                    score.value += 10  # 10点アップ
+                    bird.change_img(6, screen)  # こうかとん喜びエフェクト
+                    Enemy_num -= 1 # 敵機数を減らす
+                for bomb in bombs:
+                    bomb.bomb_check()
+                    exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+                    score.value += 1
+
+            for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
+                if bird.state == "normal":
+                    if hp_gauge.decrease(2):  # ダメージを受け、HPが0の場合
+                        hp_gauge.update(screen)  # 負け判定後もゲージを表示
+                        score.update(screen, Enemy_num, count_ProSpirit, tmr)
+                        pg.display.update()
+                        Game = gameover(screen)
+                        print("ゲームオーバー")
+                        if not Game:
+                            return  # プログラム終了
+                elif bird.state == "hyper":
+                    continue
+
+            bird.update(key_lst, screen)
+            beams.update()
+            beams.draw(screen)
+            emys.update()
+            emys.draw(screen)
+            bombs.update()
+            bombs.draw(screen)
+            exps.update()
+            exps.draw(screen)
+            score.update(screen, Enemy_num, count_ProSpirit, tmr)
+            hp_gauge.update(screen)  # 更新されたHPゲージを表示
+            # マウスカーソル位置にドーナツ型の円を描画
+            pos = pg.mouse.get_pos()
+            circle = pg.Surface((28, 28), pg.SRCALPHA)  # 固定サイズのサーフェスを作成
+            pg.draw.circle(circle, (255, 255, 255), (14, 14), 14)  # 外側の白い円
+            pg.draw.circle(circle, (0, 0, 0, 0), (14, 14), 10)  # 内側の黒い円
+            screen.blit(circle, (pos[0] - 14, pos[1] - 14))  # サークルをマウス位置に描画
+            pg.display.update()
+            tmr += 1
+            clock.tick(50)
 
 
 
