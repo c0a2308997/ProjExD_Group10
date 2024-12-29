@@ -482,7 +482,6 @@ class ProSpirit:
                 pg.display.update()
                 time.sleep(1)
                 GAME_ProSpirit = False
-                print(result_ProSpirit)
             
         return result_ProSpirit
                 
@@ -496,12 +495,13 @@ class ProSpirit:
             self.decide = "Miss"
         return self.decide
     
-def reset_game(score, emys, hp_gauge, Enemy_num=0, tmr=0): 
+def reset_game(score, emys, bombs, hp_gauge, Enemy_num=0, tmr=0): 
     score.value = 0
     Enemy_num = 0  # 敵機の数
     tmr = 0  # タイマー
     hp_gauge.now_hp = hp_gauge.max_hp  # 自キャラのHPを最大に回復
     emys.empty()  # 敵を全削除
+    bombs.empty()
     hp_gauge.now_color = (0, 255, 0)  # 現在のゲージを緑色に再設定
     return Enemy_num, tmr
 
@@ -693,10 +693,9 @@ def main():
                         score.update(screen, Enemy_num, count_ProSpirit, tmr)
                         pg.display.update()
                         Game = gameover(screen)
-                        print("ゲームオーバー")
                         if not Game:
                             return  # プログラム終了
-                        Enemy_num, tmr = reset_game(score, emys, hp_gauge)
+                        Enemy_num, tmr = reset_game(score, emys, bombs, hp_gauge)
                 elif bird.state == "hyper":
                     continue
 
