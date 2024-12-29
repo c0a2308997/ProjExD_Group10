@@ -591,10 +591,12 @@ def main():
         for i in range(len(instructions)):
             info_text = info_font.render(instructions[i], True, (255, 255, 255))
             screen.blit(info_text, (150, HEIGHT//3*2 + i * 40))  # 位置を調整
-
+          
         # スタート方法の表示
         start_text = start_font.render(start_info, True, (255, 0, 0))
         start_rect = start_text.get_rect(center=(WIDTH // 2, HEIGHT - 20))
+        # 背景の矩形を描画
+        pg.draw.rect(screen, (0, 0, 0), start_rect.inflate(-6, -8))
         screen.blit(start_text, start_rect)
 
         # マウスカーソル位置に〇を描画
