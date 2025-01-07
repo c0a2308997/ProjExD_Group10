@@ -39,7 +39,7 @@ class HpGauge:
     HPゲージに関するクラス
     """
     def __init__(self):
-        self.max_hp = 10  # HPの最大を10に設定
+        self.max_hp = 20  # HPの最大を20に設定
         self.now_hp = self.max_hp  # 現在のHPを最大のHPに初期化
         self.empty_color = (128, 128, 128)  # 空のゲージを灰色に設定
         self.now_color = (0, 255, 0)  # 現在のゲージを緑色に設定
@@ -310,6 +310,10 @@ class Score:
         self.rect = self.image.get_rect()
         self.rect.center = WIDTH // 2, 30  # 表示位置を画面中央（幅）に調整
 
+        # count_ProSpirit用の設定
+        self.small_font = pg.font.Font("font/BebasNeue-Regular.ttf", 15)
+        self.small_text_color = (128, 128, 128)  # 灰色
+
     def update(self, screen: pg.Surface, Enemy_num, count_ProSpirit, tmr):
         """
         スコアの更新と描画を行うメソッド
@@ -318,8 +322,8 @@ class Score:
           - Enemy_num: 敵機の数
           - count_ProSpirit: 実行までのカウント
         """
-        # 更新されたスコア文字列を生成
-        text = f"{self.value:05} Pt  Time:{tmr//60:03} {Enemy_num:03} {count_ProSpirit}"
+        # スコア表示
+        text = f"{self.value:05} Pt  Time:{tmr//60:03}"  # {Enemy_num:03} {count_ProSpirit}
         self.image = self.font.render(text, True, self.text_color)
         self.rect = self.image.get_rect()  # 新しいサイズに合わせてRectを更新
         self.rect.center = WIDTH // 2, 35  # 表示位置を再設定
@@ -335,57 +339,71 @@ class Score:
         )
         # 背景用の透明なSurfaceを作成
         bg_surface = pg.Surface((bg_rect.width, bg_rect.height), pg.SRCALPHA)
-        pg.draw.rect(bg_surface, (255, 255, 255, 200), bg_surface.get_rect(), border_radius=15)# 丸角の四角形を背景Surfaceに描画
-        screen.blit(bg_surface, (bg_rect.x, bg_rect.y))# 背景Surfaceをメイン画面に描画
-        screen.blit(self.image, self.rect)# 文字を描画
+        pg.draw.rect(bg_surface, (255, 255, 255, 200), bg_surface.get_rect(), border_radius=15)  # 丸角の四角形を背景Surfaceに描画
+        screen.blit(bg_surface, (bg_rect.x, bg_rect.y))  # 背景Surfaceをメイン画面に描画
+        screen.blit(self.image, self.rect)  # 文字を描画
 
-def gameover(screen: pg.Surface) -> None:
-    clock = pg.time.Clock()
-    alpha = 0  # 背景フェードイン用
-    fade_speed = 5  # フェード速度
+        # count_ProSpiritの表示
+        small_text = f"Enemy: {Enemy_num:03}  |  Timing Game: {count_ProSpirit}"
+        small_image = self.small_font.render(small_text, True, self.small_text_color)
+        small_rect = small_image.get_rect()
+        small_rect.bottomright = (WIDTH - 10, HEIGHT - 10)  # 画面右下に配置
+        screen.blit(small_image, small_rect)
+
+
+def gameover(screen: pg.Surface, score: int) -> None:
+    clock = pg.time.Clock()  # ゲームのフレームレート管理用のClockオブジェクトを作成
+    alpha = 0  # 背景フェードイン用の透明度を初期化
+    fade_speed = 5  # 背景フェードインの速度
     # 背景色の赤いレイヤー
-    red_img = pg.Surface((WIDTH, HEIGHT))
-    red_img.fill((255, 127, 80))
-    red_img.set_alpha(alpha)
+    red_img = pg.Surface((WIDTH, HEIGHT))  # 画面サイズに合わせたSurfaceを作成
+    red_img.fill((255, 127, 80))  # 赤みのあるオレンジ色で塗りつぶし
+    red_img.set_alpha(alpha)  # 初期透明度を設定
     # フォント設定
-    font = pg.font.Font(None, 80)
-    small_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 40)
+    font = pg.font.Font(None, 80)  # 大きいフォントサイズでフォントを設定
+    small_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 40)  # 小さいフォントサイズでフォントを設定
+    score_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 60)  # スコア表示用のフォント設定
     # テキストレンダリング
-    txt = font.render("Game Over", True, (255, 255, 255))
-    txt_rct = txt.get_rect(center=(WIDTH / 2, HEIGHT / 3))
-    restart_txt = small_font.render("Enterキーを押して再起動するか、Qキーを押して終了します", True, (255, 255, 255))
-    restart_txt_rct = restart_txt.get_rect(center=(WIDTH / 2, HEIGHT / 1.5))
+    txt = font.render("Game Over", True, (255, 255, 255))  # "Game Over"を白色で描画
+    txt_rct = txt.get_rect(center=(WIDTH / 2, HEIGHT / 3))  # 画面上部中央に配置
+    restart_txt = small_font.render("Enterキーを押して再起動するか、Qキーを押して終了します", True, (255, 255, 255))  
+    # 再起動/終了の説明文を白色で描画
+    restart_txt_rct = restart_txt.get_rect(center=(WIDTH / 2, HEIGHT - 100))  # 画面下部中央に配置（少し上に調整）
+    # スコア表示
+    score_text = score_font.render(f"Score: {score}", True, (255, 255, 255))  # スコアを白色で描画
+    score_rct = score_text.get_rect(center=(WIDTH / 2, HEIGHT / 2 + 100))  # スコアを中央より少し下に配置
     # イラスト画像読み込み
-    cry_img = pg.image.load("fig/8.png")
-    cry_img = pg.transform.scale(cry_img, (150, 150))  # サイズ調整
-    cry_rct = cry_img.get_rect()
-    cry_rct.center = WIDTH / 2, HEIGHT / 2
-    while True:
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                pg.quit()
-                sys.exit()
-            elif event.type == pg.KEYDOWN:
-                if event.key == pg.K_RETURN:
-                    time.sleep(1)
-                    return True
-                elif event.key == pg.K_q:
-                    time.sleep(1)
-                    return None
+    cry_img = pg.image.load("fig/8.png")  # 画像を読み込む
+    cry_img = pg.transform.scale(cry_img, (150, 150))  # 画像サイズを150x150ピクセルに調整
+    cry_rct = cry_img.get_rect()  # 画像の位置情報を取得
+    cry_rct.center = WIDTH / 2, HEIGHT / 2  # 画面中央に配置
+    while True:  # 無限ループでゲームオーバー画面を表示
+        for event in pg.event.get():  # イベントを取得
+            if event.type == pg.QUIT:  # ウィンドウの×ボタンが押された場合
+                pg.quit()  # pygameを終了
+                sys.exit()  # プログラムを終了
+            elif event.type == pg.KEYDOWN:  # キーが押された場合
+                if event.key == pg.K_RETURN:  # Enterキーが押された場合
+                    time.sleep(1)  # 1秒間待機
+                    return True  # 再起動を示す
+                elif event.key == pg.K_q:  # Qキーが押された場合
+                    time.sleep(1)  # 1秒間待機
+                    return None  # 終了を示す
         # 背景のフェードイン効果
-        if alpha < 255:
-            alpha += fade_speed
-            red_img.set_alpha(alpha)
+        if alpha < 255:  # 透明度が最大値に達していない場合
+            alpha += fade_speed  # 透明度を増加
+            red_img.set_alpha(alpha)  # 増加した透明度を適用
         # 描画
-        screen.blit(red_img, (0, 0))
-        screen.blit(txt, txt_rct)
-        screen.blit(restart_txt, restart_txt_rct)
-        screen.blit(cry_img, cry_rct)
+        screen.blit(red_img, (0, 0))  # 赤い背景を描画
+        screen.blit(txt, txt_rct)  # "Game Over"テキストを描画
+        screen.blit(score_text, score_rct)  # スコアテキストを描画
+        screen.blit(restart_txt, restart_txt_rct)  # 再起動/終了の説明文を描画
+        screen.blit(cry_img, cry_rct)  # 泣いている画像を描画
         # 簡単なアニメーション: 画像を左右に揺らす
-        cry_rct.centerx += 2 * (pg.time.get_ticks() // 100 % 2 * 2 - 1)  # 100msごとに動きの向きを切り替え
-        pg.display.update()
-        clock.tick(60)
-
+        cry_rct.centerx += 2 * (pg.time.get_ticks() // 100 % 2 * 2 - 1)  
+        # 100msごとに左右に動く方向を切り替え
+        pg.display.update()  # 画面を更新
+        clock.tick(60)  # 60FPSでループを制御
 
 def stars(screen: pg.Surface, star_count: int = 100):
     """
@@ -393,117 +411,123 @@ def stars(screen: pg.Surface, star_count: int = 100):
     引数1 screen：背景を描画するSurface
     引数2 star_count：星の数（デフォルト100個）
     """
-    for _ in range(star_count):
-        x = random.randint(0, WIDTH)
-        y = random.randint(0, HEIGHT)
-        size = random.randint(1, 3)  # 星のサイズ（1〜3ピクセル）
-        pg.draw.circle(screen, (255, 255, 255), (x, y), size)
+    for _ in range(star_count):  # 星の数だけループを実行
+        x = random.randint(0, WIDTH)  # 星のX座標をランダムに決定
+        y = random.randint(0, HEIGHT)  # 星のY座標をランダムに決定
+        size = random.randint(1, 3)  # 星のサイズを1〜3ピクセルの間でランダムに決定
+        pg.draw.circle(screen, (255, 255, 255), (x, y), size)  # 白色の星を描画
+        # (pg.draw.circle) # 白色の星を(x, y)の位置に指定したサイズで描画
 
 class ProSpirit:
     """
     タイミングゲーム用のクラス
     """
     def __init__(self):
-        self.font = pg.font.Font(None, 50)
-        self.color = (0, 0, 255, 120) # 青色（透過）
-        self.NiceZone = (125, 125, 125, 200) # 灰色（透過）
-        self.GreatCircle = (255, 255, 0) # 黄色（枠）
-        self.x = WIDTH//2 # 位置を真ん中に設定
-        self.y = HEIGHT//3 * 2 # 位置を真ん中に設定
-        self.outRADIUS = 50 # ドーナツ型の外側の半径
-        self.inRADIUS = 20 # ドーナツ側の内側の半径
-        self.RADIUS = self.outRADIUS * 2 # 青い円の初期半径を灰色の2倍に設定
-        self.GreatJudge = (self.outRADIUS + self.inRADIUS)//2
-        self.SPEED = 4 # 小さくなる速さを設定
-        self.decide = None
+        self.font = pg.font.Font(None, 50) # フォントサイズ50のデフォルトフォントを設定
+        self.color = (0, 0, 255, 120) # 青色（透過）を設定
+        self.NiceZone = (125, 125, 125, 200) # 灰色（透過）を設定
+        self.GreatCircle = (255, 255, 0) # 黄色（枠）の色を設定
+        self.x = WIDTH // 2 # X座標を画面の中央に設定
+        self.y = HEIGHT // 3 * 2 # Y座標を画面の下3分の2の位置に設定
+        self.outRADIUS = 50 # ドーナツ型の外側の半径を50に設定
+        self.inRADIUS = 20 # ドーナツ型の内側の半径を20に設定
+        self.RADIUS = self.outRADIUS * 2 # 青い円の初期半径を外側の2倍に設定
+        self.GreatJudge = (self.outRADIUS + self.inRADIUS) // 2 # Greatの判定基準を計算
+        self.SPEED = 4 # 青い円が小さくなる速度を設定
+        self.decide = None # 判定結果を初期化
 
     def start(self):
+        # ゲーム開始時の初期設定
         # self.x = random.randint(self.outRADIUS//2 + 10, WIDTH - self.outRADIUS//2 - 10)   # 
         # self.y = random.randint(self.outRADIUS//2 + 10, HEIGHT - self.outRADIUS//2 - 10)  # 
-        self.GreatJudge = random.randint(self.inRADIUS + 5, self.outRADIUS - 5)           # 黄色い円のGreatの基準
-        self.RADIUS = self.outRADIUS * 2 # 青い円の初期半径を灰色の2倍に再設定
+        self.GreatJudge = random.randint(self.inRADIUS + 5, self.outRADIUS - 5) # 黄色い円のGreat基準をランダムに設定
+        self.RADIUS = self.outRADIUS * 2 # 青い円の初期半径を再設定
 
     def update(self, result_ProSpirit, screen, bird, key_lst, bg_img, Enemy_num, count_ProSpirit, tmr, emys, bombs, exps, score, hp_gauge, clock):
-        tim = 0
-        game_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 35)
-        game_info = "タイミングよくスペースキーを押せ.（黄色で全打撃/灰色で半打撃）"
-        font = pygame.font.Font(None, 36)
-        black_img = pg.Surface((WIDTH, HEIGHT))
-        black_img.set_alpha(150)
-        # タイトル表示
-        game_text = game_font.render(game_info, True, (255, 255, 255))
-        game_rect = game_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 100))
-        donut = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        pygame.draw.circle(donut, self.NiceZone, (self.x, self.y), self.outRADIUS)
-        pygame.draw.circle(donut, (0, 0, 0, 0), (self.x, self.y), self.inRADIUS)
-        result_ProSpirit = None
-        GAME_ProSpirit = True
+        tim = 0 # タイマーを初期化
+        game_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 35) # ゲーム説明用のフォントを設定
+        game_info = "タイミングよくスペースキーを押せ.（黄色で全打撃/灰色で半打撃）" # ゲームの説明文
+        font = pygame.font.Font(None, 36) # 判定結果表示用のフォントを設定
+        black_img = pg.Surface((WIDTH, HEIGHT)) # 黒い背景画像を作成
+        black_img.set_alpha(150) # 背景画像の透明度を設定
+        game_text = game_font.render(game_info, True, (255, 255, 255)) # ゲーム説明文を描画
+        game_rect = game_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 100)) # 説明文の位置を設定
+        donut = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA) # ドーナツ型の描画用Surfaceを作成
+        pygame.draw.circle(donut, self.NiceZone, (self.x, self.y), self.outRADIUS) # ドーナツ型の外側を描画
+        pygame.draw.circle(donut, (0, 0, 0, 0), (self.x, self.y), self.inRADIUS) # ドーナツ型の内側を描画
+        result_ProSpirit = None # 判定結果を初期化
+        GAME_ProSpirit = True # ゲームの進行フラグを初期化
+
         while GAME_ProSpirit:
-            for event in pg.event.get():
-                if event.type == pg.QUIT:
-                    pg.quit()
-                    sys.exit()
-                if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                    result_ProSpirit = self.judge()  # 他の関数を呼び出す
-            if self.RADIUS <= 0:
-                result_ProSpirit = "Miss"
-            screen.blit(bg_img, [0, 0])
-            bird.update(key_lst, screen)
-            emys.update()
-            emys.draw(screen)
-            bombs.update()
-            bombs.draw(screen)
-            exps.update()
-            exps.draw(screen)
-            score.update(screen, Enemy_num, count_ProSpirit, tmr)
-            hp_gauge.update(screen)  # 更新されたHPゲージを表示
-            screen.blit(black_img, [0, 0])
-            screen.blit(game_text, game_rect)
-            screen.blit(donut, (0, 0))
-            # 黄色い円の枠描画
-            pygame.draw.circle(screen, self.GreatCircle, (self.x, self.y), self.GreatJudge, 3)  # 枠線の太さを2に設定
-            # 青い円の描画
-            blue_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-            pygame.draw.circle(blue_surface, self.color, (self.x, self.y), self.RADIUS)
-            screen.blit(blue_surface, (0, 0))
-            if tim > 80 and not result_ProSpirit:
-                self.RADIUS -= self.SPEED
-            tim += 1
-            pg.display.update()
-            clock.tick(50)
-            if result_ProSpirit:
-                if result_ProSpirit == "Miss":
-                    result = font.render(result_ProSpirit, True, (255, 0, 0))
-                elif result_ProSpirit == "Great":
-                    result = font.render(result_ProSpirit, True, (0, 255, 0))
-                else:
-                    result = font.render(result_ProSpirit, True, (255, 255, 255))
-                screen.blit(result, (self.x - result.get_width() // 2, self.y - result.get_height() // 2))
-                pg.display.update()
-                time.sleep(1)
-                GAME_ProSpirit = False
-            
-        return result_ProSpirit
-                
+            for event in pg.event.get(): # イベント処理ループ
+                if event.type == pg.QUIT: # ウィンドウを閉じるイベント
+                    pg.quit() # Pygameを終了
+                    sys.exit() # プログラムを終了
+                if event.type == pg.KEYDOWN and event.key == pg.K_SPACE: # スペースキーが押された場合
+                    result_ProSpirit = self.judge() # 判定処理を実行
+
+            if self.RADIUS <= 0: # 青い円が消える場合
+                result_ProSpirit = "Miss" # 判定をMissに設定
+
+            screen.blit(bg_img, [0, 0]) # 背景画像を描画
+            bird.update(key_lst, screen) # 鳥の状態を更新
+            emys.update() # 敵キャラクターを更新
+            emys.draw(screen) # 敵キャラクターを描画
+            bombs.update() # 爆弾を更新
+            bombs.draw(screen) # 爆弾を描画
+            exps.update() # 爆発エフェクトを更新
+            exps.draw(screen) # 爆発エフェクトを描画
+            score.update(screen, Enemy_num, count_ProSpirit, tmr) # スコアを更新
+            hp_gauge.update(screen) # HPゲージを更新
+            screen.blit(black_img, [0, 0]) # 黒い背景を描画
+            screen.blit(game_text, game_rect) # ゲーム説明文を描画
+            screen.blit(donut, (0, 0)) # ドーナツ型を描画
+            pygame.draw.circle(screen, self.GreatCircle, (self.x, self.y), self.GreatJudge, 3) # 黄色い円の枠を描画
+
+            blue_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA) # 青い円の描画用Surfaceを作成
+            pygame.draw.circle(blue_surface, self.color, (self.x, self.y), self.RADIUS) # 青い円を描画
+            screen.blit(blue_surface, (0, 0)) # 青い円を描画
+
+            if tim > 80 and not result_ProSpirit: # 判定が未決定で一定時間経過した場合
+                self.RADIUS -= self.SPEED # 青い円を縮小
+            tim += 1 # タイマーを増加
+
+            pg.display.update() # 画面を更新
+            clock.tick(50) # フレームレートを制御
+
+            if result_ProSpirit: # 判定が決定した場合
+                if result_ProSpirit == "Miss": # Missの場合
+                    result = font.render(result_ProSpirit, True, (255, 0, 0)) # 赤色でMissを描画
+                elif result_ProSpirit == "Great": # Greatの場合
+                    result = font.render(result_ProSpirit, True, (0, 255, 0)) # 緑色でGreatを描画
+                else: # Niceの場合
+                    result = font.render(result_ProSpirit, True, (255, 255, 255)) # 白色でNiceを描画
+                screen.blit(result, (self.x - result.get_width() // 2, self.y - result.get_height() // 2)) # 判定結果を描画
+                pg.display.update() # 画面を更新
+                time.sleep(1) # 判定結果を表示するために1秒待機
+                GAME_ProSpirit = False # ゲーム終了フラグを設定
+
+        return result_ProSpirit # 判定結果を返す
 
     def judge(self):
-        if abs(self.RADIUS - self.GreatJudge) <= 2.5:
-            self.decide = "Great"
-        elif self.inRADIUS <= self.RADIUS <= self.outRADIUS:
-            self.decide = "Nice"
-        else:
-            self.decide = "Miss"
-        return self.decide
-    
+        if abs(self.RADIUS - self.GreatJudge) <= 2.5: # 青い円の半径がGreat基準に近い場合
+            self.decide = "Great" # 判定をGreatに設定
+        elif self.inRADIUS <= self.RADIUS <= self.outRADIUS: # 青い円の半径がNiceゾーン内の場合
+            self.decide = "Nice" # 判定をNiceに設定
+        else: # その他の場合
+            self.decide = "Miss" # 判定をMissに設定
+        return self.decide # 判定結果を返す
+
 def reset_game(score, emys, bombs, hp_gauge, Enemy_num=0, tmr=0): 
-    score.value = 0
-    Enemy_num = 0  # 敵機の数
-    tmr = 0  # タイマー
-    hp_gauge.now_hp = hp_gauge.max_hp  # 自キャラのHPを最大に回復
-    emys.empty()  # 敵を全削除
-    bombs.empty()
-    hp_gauge.now_color = (0, 255, 0)  # 現在のゲージを緑色に再設定
-    return Enemy_num, tmr
+    score.value = 0 # スコアをリセット
+    Enemy_num = 0 # 敵の数をリセット
+    tmr = 0 # タイマーをリセット
+    hp_gauge.now_hp = hp_gauge.max_hp # HPを最大値に設定
+    emys.empty() # 敵を全削除
+    bombs.empty() # 爆弾を全削除
+    hp_gauge.now_color = (0, 255, 0) # HPゲージの色を緑に設定   
+    return Enemy_num, tmr # リセットされた値を返す
+
 
 
 def main():
@@ -532,6 +556,8 @@ def main():
     button_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 50)
     info_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 30)  # 説明文用のフォント
     start_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 27) # スタート方法文用のフォント
+    change_text = "Press 'R' to change the background"
+    change_font = pg.font.Font("font/YuseiMagic-Regular.ttf", 15)  # フォントを指定（サイズ15）
     start_img = pg.image.load("fig/alien1.png")
     button_rect = pg.Rect(WIDTH // 2 - 150, HEIGHT // 2, 300, 50)
 
@@ -543,6 +569,8 @@ def main():
         "・HPがなくなるとゲームオーバーになるよ。"
     ]
     start_info = "『Start Game』にカーソルを合わせてクリック，またはスペースキーでゲームを開始しよう。" # スタート方法のテキスト
+
+    change_text = "'R'キーで背景を変更できます"
 
     while start:
         for event in pg.event.get():
@@ -599,6 +627,11 @@ def main():
         pg.draw.rect(screen, (0, 0, 0), start_rect.inflate(-6, -8))
         screen.blit(start_text, start_rect)
 
+        # "R"で背景を変えられることを右上に表示
+        change_text_surface = change_font.render(change_text, True, (255, 255, 255))  # 白文字
+        change_rect = change_text_surface.get_rect(topright=(WIDTH - 5, 0))  # 右上に配置
+        screen.blit(change_text_surface, change_rect)
+
         # マウスカーソル位置に〇を描画
         pg.draw.circle(screen, (255, 255, 255), pg.mouse.get_pos(), 14)  # 赤い円を表示
         pg.draw.circle(screen, (0, 0, 0, 0), pg.mouse.get_pos(), 10)  # 黒い円を表示
@@ -638,9 +671,10 @@ def main():
                 ProSpirit_game.start()
                 result_ProSpirit = ProSpirit_game.update(result_ProSpirit, screen, bird, key_lst, bg_img, Enemy_num, count_ProSpirit, tmr, emys, bombs, exps, score, hp_gauge, clock)
 
-            if tmr%60 == 0:  # 200フレームに1回，敵機を出現させる
+            # スコアに応じて急激に出現間隔を短縮
+            if tmr % max(10, int(60 * (0.9 ** (score.value // 100)))) == 0:  # 出現間隔を指数的に短縮
                 emys.add(Enemy())
-                Enemy_num += 1 # 敵機数を増やす
+                Enemy_num += 1  # 敵機数を増やす
 
             for emy in emys:
                 if emy.state == "stop" and tmr % emy.interval == 0:
@@ -694,7 +728,7 @@ def main():
                         hp_gauge.update(screen)  # 負け判定後もゲージを表示
                         score.update(screen, Enemy_num, count_ProSpirit, tmr)
                         pg.display.update()
-                        Game = gameover(screen)
+                        Game = gameover(screen, score.value)
                         if not Game:
                             return  # プログラム終了
                         Enemy_num, tmr = reset_game(score, emys, bombs, hp_gauge)
